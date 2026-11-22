@@ -40,3 +40,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+airflow/docker-compose.local.yaml
+airflow/config/airflow.cfg
+*.p8
