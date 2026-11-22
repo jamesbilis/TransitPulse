@@ -72,6 +72,20 @@ def process_in_databricks(batch):
         response.raise_for_status()
         state = response.json()["state"]
 
+        if state["life_cycle_state"] in {"TERMINATED", "SKIPPED", "INTERNAL_ERROR"}:
+            try:
+                cleanup = requests.post(
+                    f"{host}/api/2.0/secrets/delete",
+                    headers=headers,
+                    json={"scope": "transitpulse-gcp", "key": f"batch-{timestamp}"},
+                    timeout=30,
+                )
+                cleanup.raise_for_status()
+                print(f"Removed Databricks secret for batch {timestamp}")
+            except requests.RequestException as error:
+                print(f"Could not remove Databricks secret for {timestamp}: "
+                      f"{type(error).__name__}")
+
         if state.get("result_state") == "SUCCESS":
             print(f"Databricks run {run_id} succeeded")
             return run_id
@@ -230,6 +244,45 @@ def load_alerts_to_snowflake(batch, databricks_run_id):
     )
     print(f"Processed {len(rows)} alert rows for {timestamp} from Databricks run {databricks_run_id}")
 
+@task(retries=0)
+def build_dbt_models():
+    import requests
+    from airflow.hooks.base import BaseHook
+    from airflow.sdk import get_current_context
+
+    connection = BaseHook.get_connection("transitpulse_dbt_cloud")
+    host = connection.host.rstrip("/")
+    api = f"{host}/api/v2/accounts/70506183177521"
+    headers = {"Authorization": f"Token {connection.password}"}
+    airflow_run_id = get_current_context()["run_id"]
+
+    response = requests.post(
+        f"{api}/jobs/70506183146814/run/",
+        headers=headers,
+        json={"cause": f"TransitPulse Airflow run {airflow_run_id}"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    run_id = response.json()["data"]["id"]
+    print(f"Started dbt Cloud run {run_id}")
+
+    deadline = monotonic() + 10 * 60
+    while monotonic() < deadline:
+        response = requests.get(
+            f"{api}/runs/{run_id}/", headers=headers, timeout=30
+        )
+        response.raise_for_status()
+        status = response.json()["data"]["status"]
+
+        if status == 10:
+            print(f"dbt Cloud run {run_id} succeeded")
+            return run_id
+        if status in {20, 30, 40}:
+            raise RuntimeError(f"dbt Cloud run {run_id} ended with status {status}")
+
+        sleep(15)
+
+    raise TimeoutError(f"dbt Cloud run {run_id} did not finish within 10 minutes")
 
 with DAG(
     dag_id="transitpulse_ingest",
@@ -246,5 +299,7 @@ with DAG(
         output_processor=json.loads,
     )
     databricks_run = process_in_databricks(ingest_snapshots.output)
-    load_weather_to_snowflake(ingest_snapshots.output, databricks_run)
-    load_alerts_to_snowflake(ingest_snapshots.output, databricks_run)
+    weather_load = load_weather_to_snowflake(ingest_snapshots.output, databricks_run)
+    alerts_load = load_alerts_to_snowflake(ingest_snapshots.output, databricks_run)
+
+    [weather_load, alerts_load] >> build_dbt_models()
