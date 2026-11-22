@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,15 +55,47 @@ def save_json(name, payload, timestamp):
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return path
 
+def upload_snapshots(bucket_name, snapshots, capture_date):
+    from google.cloud import storage
+
+    bucket = storage.Client().bucket(bucket_name)
+    objects = {}
+
+    for source_name, path in snapshots:
+        key = f"raw/{source_name}/date={capture_date}/{path.name}"
+        bucket.blob(key).upload_from_filename(
+            str(path),
+            content_type="application/json",
+            if_generation_match=0,
+        )
+        objects[source_name] = key
+        print(f"Uploaded gs://{bucket_name}/{key}")
+
+    return objects
 
 def main():
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    captured_at = datetime.now(timezone.utc)
+    timestamp = captured_at.strftime("%Y%m%dT%H%M%SZ")
+    snapshots = []
 
     try:
         for name, source in SOURCES.items():
             payload = fetch_json(source)
             path = save_json(name, payload, timestamp)
+            snapshots.append((name, path))
             print(f"Saved {name} data to {path}")
+        bucket_name = os.getenv("TRANSITPULSE_GCS_BUCKET")
+        objects = {}
+        if bucket_name:
+            objects = upload_snapshots(
+                bucket_name, snapshots, captured_at.date().isoformat()
+            )
+
+        print(json.dumps({
+            "capture_timestamp": timestamp,
+            "bucket": bucket_name,
+            "objects": objects,
+        }))
     except (requests.RequestException, ValueError) as error:
         print(f"Ingestion failed: {error}", file=sys.stderr)
         return 1
