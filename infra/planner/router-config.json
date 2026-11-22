@@ -1,0 +1,16 @@
+{
+  "updaters": [
+    {
+      "type": "stop-time-updater",
+      "url": "https://cdn.mbta.com/realtime/TripUpdates.pb",
+      "feedId": "mbta-ma-us",
+      "frequency": "30s"
+    },
+    {
+      "type": "real-time-alerts",
+      "url": "https://cdn.mbta.com/realtime/Alerts.pb",
+      "feedId": "mbta-ma-us",
+      "frequency": "60s"
+    }
+  ]
+}
