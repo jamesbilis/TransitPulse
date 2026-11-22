@@ -4,7 +4,7 @@ TransitPulse is a phased transit and weather data project focused on the Boston 
 
 ## Releases
 
-**Release 1 — Data platform:** Python, MBTA and Open-Meteo APIs, AWS S3, Airflow with Astro/Docker, Databricks with PySpark and Delta Lake, Snowflake, dbt browser IDE, Terraform, and GitHub Actions.
+**Release 1 — Data platform:** Python, MBTA and Open-Meteo APIs, GCP, Airflow with Astro/Docker, Databricks with PySpark and Delta Lake, Snowflake, dbt browser IDE, Terraform, and GitHub Actions.
 
 **Release 2 — Commuter app:** Next.js and FastAPI for live MBTA predictions and historical transit and weather analytics. Managed login can come later.
 
