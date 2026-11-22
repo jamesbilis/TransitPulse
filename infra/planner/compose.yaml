@@ -1,0 +1,11 @@
+services:
+  planner:
+    image: opentripplanner/opentripplanner:2.8.1
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - ../../data/planner:/var/opentripplanner
+      - ./router-config.json:/var/opentripplanner/router-config.json:ro
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx1500m -XX:ActiveProcessorCount=2"
+    command: ["--load", "--serve"]

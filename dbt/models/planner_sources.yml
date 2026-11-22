@@ -1,0 +1,27 @@
+version: 2
+sources:
+  - name: planner
+    database: TRANSITPULSE
+    schema: PUBLIC
+    tables:
+      - name: stop_events
+        identifier: PLANNER_STOP_EVENTS
+        columns:
+          - name: service_date
+            data_tests: [not_null]
+          - name: trip_id
+            data_tests: [not_null]
+      - name: gtfs_versions
+        identifier: PLANNER_GTFS_VERSIONS
+      - name: alert_snapshots
+        identifier: PLANNER_ALERT_SNAPSHOTS
+
+models:
+  - name: stg_planner_stop_events
+    columns:
+      - name: stop_id
+        data_tests: [not_null]
+  - name: stg_planner_alert_scope
+    columns:
+      - name: alert_id
+        data_tests: [not_null]
