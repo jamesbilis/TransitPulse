@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_weather
+    columns:
+      - name: captured_at_utc
+        data_tests: [not_null, unique]
+      - name: observed_at_utc
+        data_tests: [not_null]
+
+  - name: stg_alerts
+    columns:
+      - name: alert_id
+        data_tests: [not_null]
+      - name: captured_at_utc
+        data_tests: [not_null]

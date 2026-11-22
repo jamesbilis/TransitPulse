@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: transitpulse
+    database: TRANSITPULSE
+    schema: PUBLIC
+    tables:
+      - name: weather
+        identifier: TRANSITPULSE_WEATHER_BATCHES
+      - name: alerts
+        identifier: TRANSITPULSE_ALERT_BATCHES
